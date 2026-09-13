@@ -9,6 +9,7 @@ import {
 import { defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from '@/components/navigation/Sidebar.vue'
+import NotificationsPanel from '@/components/notifications/NotificationsPanel.vue'
 import SettingsModal from '@/components/settings/SettingsModal.vue'
 import { useIsMobile } from '@/composables/useIsMobile'
 import { useNotificationsRealtime } from '@/composables/useNotifications'
@@ -59,12 +60,7 @@ const isMobile = useIsMobile()
 					icon="lucide-search"
 					@click="openSearch"
 				/>
-				<MobileNavItem
-					label="Notifications"
-					icon="lucide-bell"
-					to="/notifications"
-					:active="route.name === 'Notifications'"
-				/>
+				<NotificationsPanel mobile />
 				<!-- This bar only exists on mobile, so it goes straight to the hub.
 				     Pointing at /settings would bounce through the dialog route and
 				     land on a tab page instead of the list. -->

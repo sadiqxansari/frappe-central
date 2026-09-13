@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Alert, Breadcrumbs, PageHeader, PageHeaderMobile } from 'frappe-ui'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import BillingContactTaxCard from '@/components/billing/BillingContactTaxCard.vue'
 import CollectionActionBanner from '@/components/billing/CollectionActionBanner.vue'
 import CycleBreakdownPanel from '@/components/billing/CycleBreakdownPanel.vue'
@@ -11,12 +11,13 @@ import PayingForCard from '@/components/billing/PayingForCard.vue'
 import PayingForPanel from '@/components/billing/PayingForPanel.vue'
 import PaymentMethodsCard from '@/components/billing/PaymentMethodsCard.vue'
 import PaymentSchedulePanel from '@/components/billing/PaymentSchedulePanel.vue'
+import ProjectsCard from '@/components/billing/ProjectsCard.vue'
+import ProjectsPanel from '@/components/billing/ProjectsPanel.vue'
 import StopBillingCard from '@/components/billing/StopBillingCard.vue'
 import WalletCard from '@/components/billing/WalletCard.vue'
 import WalletHistoryPanel from '@/components/billing/WalletHistoryPanel.vue'
 import NavDrawerTitle from '@/components/navigation/NavDrawerTitle.vue'
 import { useBillingSetup } from '@/composables/useBillingSetup'
-import { computed } from 'vue'
 
 // Billing › Overview (#69) — one scrollable surface that absorbs the legacy
 // Overview, Credits, Payment methods, Subscriptions, and Settings pages. Each card
@@ -31,7 +32,7 @@ const { complete, setupDialogOpen } = useBillingSetup()
 // One docked tray at a time: the panel column is a single 24rem slot, and two
 // open at once would stack two SidePanels side by side and squeeze the content
 // out. A single ref names which is showing, and each card's v-model writes it.
-type Tray = 'wallet' | 'cycle' | 'schedule' | 'payingFor' | null
+type Tray = 'wallet' | 'cycle' | 'schedule' | 'payingFor' | 'projects' | null
 const tray = ref<Tray>(null)
 
 function trayModel(name: Exclude<Tray, null>) {
@@ -46,6 +47,7 @@ const showWalletHistory = trayModel('wallet')
 const showCycleBreakdown = trayModel('cycle')
 const showSchedule = trayModel('schedule')
 const showPayingFor = trayModel('payingFor')
+const showProjects = trayModel('projects')
 
 // Rare, scary verbs live folded under "Advanced" — reference, not news, same
 // pattern as the invoice Activity fold.
@@ -100,6 +102,7 @@ const advancedOpen = ref(false)
 						/>
 					</div>
 					<PayingForCard @open="showPayingFor = true" />
+					<ProjectsCard @open="showProjects = true" />
 					<PaymentMethodsCard />
 					<BillingContactTaxCard @edit="setupDialogOpen = true" />
 
@@ -130,6 +133,7 @@ const advancedOpen = ref(false)
 			<CycleBreakdownPanel v-model:open="showCycleBreakdown" />
 			<PaymentSchedulePanel v-model:open="showSchedule" />
 			<PayingForPanel v-model:open="showPayingFor" />
+			<ProjectsPanel v-model:open="showProjects" />
 		</div>
 
 		<EditBillingProfileDialog v-model="setupDialogOpen" />

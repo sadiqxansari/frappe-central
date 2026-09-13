@@ -7,8 +7,8 @@ import {
 	Spinner,
 	useCall,
 } from 'frappe-ui'
-import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { API, method } from '@/api/methods'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -41,7 +41,7 @@ import {
 	type ServerVisual,
 	STATUS_FILTERS,
 } from '@/lib/serverMap'
-import { errorToast, successToast } from '@/lib/toast'
+import { errorToast, getErrorMessage, successToast } from '@/lib/toast'
 import type { Region } from '@/types/Central/Region'
 import signingInHtml from './signing-in.html?raw'
 
@@ -51,6 +51,7 @@ import signingInHtml from './signing-in.html?raw'
 // Lifecycle actions reuse useServers so the map, panel, and ⋯ menus share one path.
 
 const router = useRouter()
+const route = useRoute()
 
 const { assets, sites, loading, error, reload } = useServerMapData()
 const { regions } = useRegions()
@@ -323,6 +324,23 @@ watch(panelOpen, (isOpen) => {
 	if (!isOpen) locationFilter.value = null
 })
 
+// Landing straight from "Create server" (?created=<id>): open the list so the new
+// server's provisioning row is visible right away, not hidden behind the collapsed pill.
+const cameFromCreate =
+	typeof route.query.created === 'string' && !!route.query.created
+
+// Opening the map shows the current fleet. The feed is a shared singleton that only
+// reloads on team-ready or a live event, so a server created while this page was
+// unmounted (the New server flow) wouldn't be here yet — reload on every entry.
+onMounted(() => {
+	if (activeTeam.value) reload()
+	if (cameFromCreate) {
+		panelOpen.value = true
+		// Drop the flag so a back/refresh doesn't reopen the panel.
+		router.replace({ path: '/servers', query: {} })
+	}
+})
+
 // — Commands. One feed carries servers and sites, so a single reload refreshes both.
 function reloadAll(): void {
 	reload()
@@ -336,9 +354,25 @@ const doStart = (server: AssetRow): Promise<void> => withReload(start(server))
 const doStop = (server: AssetRow): Promise<void> => withReload(stop(server))
 
 const pendingTerminate = ref<AssetRow | null>(null)
+const terminateError = ref('')
+// Reset the inline error whenever the dialog opens on a different server or closes.
+watch(pendingTerminate, () => {
+	terminateError.value = ''
+})
 async function confirmTerminate(server: AssetRow): Promise<void> {
-	pendingTerminate.value = null
-	await withReload(terminate(server))
+	terminateError.value = ''
+	try {
+		// Destructive: keep the dialog open and show the reason inline on failure, rather
+		// than closing and firing a toast the user may miss. The row then shows "Terminating…".
+		await terminate(server)
+		pendingTerminate.value = null
+		reload()
+	} catch (e) {
+		terminateError.value = getErrorMessage(
+			e,
+			"We couldn't terminate this server.",
+		)
+	}
 }
 
 const pendingResize = ref<AssetRow | null>(null)
@@ -374,7 +408,7 @@ async function openSite(name: string): Promise<void> {
 			tab?.close()
 			errorToast(
 				undefined,
-				"Couldn't open the site — it may not be ready yet. Try again in a moment.",
+				"Couldn't open the site. It may not be ready yet. Try again in a moment.",
 			)
 		}
 	} catch (e) {
@@ -578,6 +612,7 @@ async function confirmSiteTerminate(): Promise<void> {
 			confirm-label="Yes, terminate"
 			theme="red"
 			:loading="busy === pendingTerminate?.resource_id"
+			:error="terminateError"
 			@confirm="confirmTerminate"
 		>
 			<p class="text-p-base text-ink-gray-7">

@@ -9,6 +9,8 @@ own state entails failure, and never claim a charge will succeed. And the locked
 read must not report a fallen catalog price as a negative saving.
 """
 
+from itertools import pairwise
+
 import frappe
 
 from central.billing.api import dashboard
@@ -43,7 +45,14 @@ class OverviewBase(IntegrationTestCase):
 		self._purge()
 
 	def _purge(self):
-		for dt in ("Invoice", "Credit Ledger Entry", "Payment Method", "Tax Profile", "Billing Profile"):
+		for dt in (
+			"Invoice",
+			"Credit Ledger Entry",
+			"Payment Method",
+			"Tax Profile",
+			"Billing Profile",
+			"Project",
+		):
 			frappe.db.delete(dt, {"team": TEAM})
 		frappe.db.delete("Credit Wallet", {"team": TEAM})
 		for sub in frappe.get_all("Subscription", {"team": TEAM}, pluck="name"):
@@ -93,13 +102,62 @@ class TestForecastBasis(OverviewBase):
 				"currency": "INR",
 				"subtotal": 1000,
 				"total": 1000,
-				"items": [{"resource_type": "bundle", "plan": PLAN, "rate": 1000, "days": 30, "amount": 1000}],
+				"items": [
+					{"resource_type": "bundle", "plan": PLAN, "rate": 1000, "days": 30, "amount": 1000}
+				],
 			}
 		).insert(ignore_permissions=True)
 
 		detail = dashboard.get_invoice(invoice.name)
 
 		self.assertEqual(detail["items"][0]["basis"], "Measured")
+
+
+class TestForecastCarriesProjectTags(OverviewBase):
+	"""Each forecast line says which Project (if any) its resource is tagged into —
+	stamped by the same `_tag_projects` helper a real invoice generation uses, so a
+	forecast and its eventual invoice always agree on the label (#billing-group)."""
+
+	def test_untagged_lines_carry_no_project(self):
+		self._provision(rate=3000)
+
+		fc = dashboard.get_forecast(TEAM)
+
+		self.assertTrue(fc["line_items"])
+		for line in fc["line_items"]:
+			self.assertIsNone(line["project"])
+			self.assertIsNone(line["project_title"])
+
+	def test_a_tagged_lines_project_is_named(self):
+		sub = self._provision(rate=3000)
+		project = frappe.get_doc({"doctype": "Project", "title": "Customer X", "team": TEAM}).insert().name
+		frappe.db.set_value("Subscription", sub, "project", project)
+		frappe.db.commit()
+
+		fc = dashboard.get_forecast(TEAM)
+
+		self.assertTrue(fc["line_items"])
+		for line in fc["line_items"]:
+			self.assertEqual(line["project"], project)
+			self.assertEqual(line["project_title"], "Customer X")
+		# And the total still includes it — there is only ever one consolidated bill.
+		self.assertEqual(fc["subtotal"], 3000.0)
+
+	def test_a_disabled_projects_lines_read_as_untagged(self):
+		# Matches real drafting (generate.py _resource_project_map): a disabled
+		# project's resources go untagged, so the breakdown must not keep showing a
+		# stale project label for a line that will actually bill untagged.
+		sub = self._provision(rate=3000)
+		project = frappe.get_doc(
+			{"doctype": "Project", "title": "Customer X", "team": TEAM, "enabled": 0}
+		).insert().name
+		frappe.db.set_value("Subscription", sub, "project", project)
+		frappe.db.commit()
+
+		fc = dashboard.get_forecast(TEAM)
+
+		for line in fc["line_items"]:
+			self.assertIsNone(line["project"])
 
 
 class TestNextPayment(OverviewBase):
@@ -482,7 +540,7 @@ class TestResizedInvoiceReadsAsASequence(OverviewBase):
 
 		# No gaps: each window picks up where the last left off, so the month reads
 		# as one continuous story rather than disconnected fragments.
-		for earlier, later in zip(bundles, bundles[1:], strict=False):
+		for earlier, later in pairwise(bundles):
 			self.assertEqual(earlier["period_to"], later["period_from"])
 
 	def test_the_window_is_described_in_plain_dates(self):

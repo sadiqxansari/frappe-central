@@ -175,14 +175,14 @@ watch(activeTeam, (team, previous) => {
 					variant="ghost"
 					icon="lucide-mail"
 					:disabled="true"
-					title="Email invoice — coming soon"
+					title="Email invoice (coming soon)"
 					label="Email invoice"
 				/>
 				<Button
 					variant="ghost"
 					icon="lucide-download"
 					:disabled="true"
-					title="Download PDF — coming soon"
+					title="Download PDF (coming soon)"
 					label="Download PDF"
 				/>
 			</template>

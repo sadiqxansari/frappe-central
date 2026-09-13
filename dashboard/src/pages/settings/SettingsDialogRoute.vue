@@ -6,10 +6,10 @@ import { useCapabilities } from '@/composables/useCapabilities'
 import { useIsMobile } from '@/composables/useIsMobile'
 import {
 	MOBILE_SETTINGS_BASE,
+	returnFromSettings,
 	SETTINGS_BASE,
 	SETTINGS_TABS,
 	type SettingsTab,
-	returnFromSettings,
 	settingsOpen,
 	settingsTab,
 } from '@/composables/useSettings'
@@ -41,7 +41,14 @@ const reachable = (value: SettingsTab): boolean => {
 }
 
 watch(
-	[() => route.params.tab, isMobile, loading, isMember, canEditTeam, canDeleteTeam],
+	[
+		() => route.params.tab,
+		isMobile,
+		loading,
+		isMember,
+		canEditTeam,
+		canDeleteTeam,
+	],
 	() => {
 		const param = route.params.tab
 		const tab = known(param) ? param : 'profile'

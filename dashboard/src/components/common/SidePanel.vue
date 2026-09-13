@@ -1,6 +1,21 @@
+<script lang="ts">
+import type { InjectionKey, Ref } from 'vue'
+
+export const SIDE_PANEL_SWITCHING: InjectionKey<Ref<boolean>> = Symbol(
+	'side-panel-switching',
+)
+</script>
+
 <script setup lang="ts">
 import { Button } from 'frappe-ui'
-import { nextTick, onBeforeUnmount, useTemplateRef, watch } from 'vue'
+import {
+	inject,
+	nextTick,
+	onBeforeUnmount,
+	ref,
+	useTemplateRef,
+	watch,
+} from 'vue'
 import { useIsMobile } from '@/composables/useIsMobile'
 
 // The docked detail panel every page shares — a 24rem column that slides in
@@ -25,6 +40,7 @@ const open = defineModel<boolean>('open', { default: false })
 // otherwise a screen reader walks straight into the page behind it.
 const isMobile = useIsMobile()
 const panel = useTemplateRef<HTMLElement>('panel')
+const switching = inject(SIDE_PANEL_SWITCHING, ref(false))
 
 // The panel is docked, not modal, so it never holds focus — Esc has to be
 // caught on the document. A stacked dialog owns Esc first: closing both at once
@@ -73,7 +89,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscape))
 	     thing that behaves one way in a desktop emulator and another on a phone.
 	     Allowing the one gesture the sheet needs costs nothing — pinch-zoom and
 	     horizontal pan stay blocked either way. -->
-	<Transition name="slide" appear>
+	<Transition :name="switching ? 'switch' : 'slide'" appear>
 		<aside
 			v-if="open"
 			ref="panel"
@@ -155,5 +171,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscape))
 	/* -24rem mirrors w-[24rem]: net layout width 0 while hidden. */
 	transform: translateX(100%);
 	margin-inline-end: -24rem;
+}
+
+.switch-leave-active {
+	display: none;
+}
+.switch-enter-active {
+	transition: opacity 150ms ease-out;
+}
+.switch-enter-from {
+	opacity: 0;
 }
 </style>

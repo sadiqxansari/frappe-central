@@ -194,16 +194,22 @@ function onAdd(): void {
 	>
 		<template v-if="canManageBilling" #action>
 			<Button
+				variant="ghost"
 				size="xs"
-				:label="ordered.length ? 'Add method' : 'Add payment method'"
-				icon-left="lucide-plus"
+				label="Add payment method"
 				@click="onAdd"
-			/>
+			>
+				<template #icon>
+					<span class="lucide-plus size-4" aria-hidden="true" />
+				</template>
+			</Button>
 		</template>
 
 		<div v-if="loading" class="space-y-3 py-1">
 			<div v-for="i in 2" :key="i" class="flex items-center gap-3">
-				<span class="size-4 shrink-0 animate-pulse rounded-4 bg-surface-gray-2" />
+				<span
+					class="size-4 shrink-0 animate-pulse rounded-4 bg-surface-gray-2"
+				/>
 				<div class="flex-1 space-y-1.5">
 					<span
 						class="block h-3.5 w-40 animate-pulse rounded-4 bg-surface-gray-2"
@@ -218,13 +224,13 @@ function onAdd(): void {
 		<template v-else>
 			<div class="divide-y divide-outline-gray-1">
 				<div class="flex items-center justify-between gap-3 py-3">
-					<div class="flex min-w-0 items-start gap-2.5">
+					<div class="flex min-w-0 items-start gap-2">
 						<span
 							class="lucide-wallet mt-0.5 size-4 shrink-0 text-ink-gray-5"
 							aria-hidden="true"
 						/>
 						<div class="min-w-0">
-							<span class="truncate text-sm-medium text-ink-gray-9">
+							<span class="truncate text-base-medium text-ink-gray-9">
 								Prepaid credits
 							</span>
 							<div class="truncate text-p-sm text-ink-gray-5">
@@ -245,7 +251,7 @@ function onAdd(): void {
 					:key="pm.name"
 					class="flex items-center justify-between gap-3 py-3"
 				>
-					<div class="flex min-w-0 items-start gap-2.5">
+					<div class="flex min-w-0 items-start gap-2">
 						<span
 							:class="methodIcon(pm)"
 							class="mt-0.5 size-4 shrink-0 text-ink-gray-5"
@@ -253,7 +259,7 @@ function onAdd(): void {
 						/>
 						<div class="min-w-0">
 							<div class="flex items-center gap-2">
-								<span class="truncate text-sm-medium text-ink-gray-9">
+								<span class="truncate text-base-medium text-ink-gray-9">
 									{{ pm.display_label || pm.method_type }}
 								</span>
 								<Badge
@@ -292,9 +298,7 @@ function onAdd(): void {
 					</div>
 				</div>
 			</div>
-
 		</template>
-
 
 		<ConfirmDialog
 			v-model:target="pendingRemove"

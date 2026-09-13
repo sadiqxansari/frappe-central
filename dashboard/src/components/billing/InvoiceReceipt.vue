@@ -49,7 +49,8 @@ const eventDetail = (ev: {
 	currency?: string
 }): string => {
 	const parts: string[] = []
-	if (ev.amount) parts.push(money(ev.amount, ev.currency || props.invoice.currency))
+	if (ev.amount)
+		parts.push(money(ev.amount, ev.currency || props.invoice.currency))
 	if (ev.detail) parts.push(ev.detail)
 	return parts.join(' · ')
 }
@@ -62,7 +63,7 @@ const eventDetail = (ev: {
 			class="flex items-center gap-1.5 px-4 pt-4 text-p-sm text-ink-red-7"
 		>
 			<span class="lucide-triangle-alert size-3.5 shrink-0" />
-			Due {{ shortDate(invoice.due_date) }} — overdue
+			Due {{ shortDate(invoice.due_date) }} (overdue)
 		</p>
 
 		<!-- Receipt: plan charges per server, then metered add-ons — each
@@ -83,7 +84,10 @@ const eventDetail = (ev: {
 						{{ money(invoice.subtotal, invoice.currency) }}
 					</dd>
 				</div>
-				<div v-if="invoice.output_tax_amount" class="flex justify-between gap-3">
+				<div
+					v-if="invoice.output_tax_amount"
+					class="flex justify-between gap-3"
+				>
 					<dt class="text-ink-gray-5">
 						{{ invoice.output_tax_type || 'Tax' }}
 						<template v-if="invoice.output_tax_rate">

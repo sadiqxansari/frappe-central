@@ -72,6 +72,12 @@ const routes = [
 				meta: { title: 'Services', feature: ['addons', 'llm'] },
 			},
 			{
+				path: 'addons/object-storage',
+				name: 'ObjectStorage',
+				component: () => import('@/pages/addons/ObjectStorage.vue'),
+				meta: { title: 'Services', feature: ['addons', 'storage'] },
+			},
+			{
 				path: 'billing',
 				name: 'Billing',
 				component: () => import('@/pages/billing/BillingOverviewPage.vue'),
@@ -103,12 +109,6 @@ const routes = [
 				name: 'SpendingLimits',
 				component: () => import('@/pages/billing/SpendingLimitsPage.vue'),
 				meta: { title: 'Limit tiers' },
-			},
-			{
-				path: 'notifications',
-				name: 'Notifications',
-				component: () => import('@/pages/notifications/NotificationsPage.vue'),
-				meta: { title: 'Notifications' },
 			},
 			// Two presentations, two URL spaces, each naming its tab. /settings is
 			// the desktop dialog — that route renders nothing and drives the dialog,

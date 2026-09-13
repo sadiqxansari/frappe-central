@@ -2,8 +2,11 @@
 import { Badge } from 'frappe-ui'
 import SubscriptionRowActions from '@/components/billing/SubscriptionRowActions.vue'
 import { money } from '@/lib/format'
-import type { SubscriptionRow } from '@/types/billing'
-import type { PayingForItem, ServiceRow } from '@/types/billing'
+import type {
+	PayingForItem,
+	ServiceRow,
+	SubscriptionRow,
+} from '@/types/billing'
 
 // One row of "what you're paying for". Lives in its own component because the
 // card shows the top few and the tray shows all of them — rendering the row twice
@@ -18,6 +21,7 @@ defineEmits<{
 	open: [sub: SubscriptionRow]
 	pause: [sub: SubscriptionRow]
 	resume: [sub: SubscriptionRow]
+	assignProject: [sub: SubscriptionRow]
 }>()
 
 type BadgeTheme = 'gray' | 'red' | 'blue' | 'green' | 'amber' | 'violet'
@@ -27,18 +31,29 @@ function serverTitle(sub: SubscriptionRow): string {
 }
 function serverSubtitle(sub: SubscriptionRow): string {
 	const parts: string[] = []
-	if (sub.plan_title && sub.plan_title !== serverTitle(sub)) parts.push(sub.plan_title)
+	if (sub.plan_title && sub.plan_title !== serverTitle(sub))
+		parts.push(sub.plan_title)
 	if (sub.region) parts.push(sub.region)
 	return parts.join(' · ') || sub.billing_cycle || 'Monthly'
 }
-function statusInfo(sub: SubscriptionRow): { label: string; theme: BadgeTheme } | null {
+function statusInfo(
+	sub: SubscriptionRow,
+): { label: string; theme: BadgeTheme } | null {
 	if (sub.status === 'Terminated') return { label: 'Terminated', theme: 'red' }
-	if (sub.account_standing === 'Suspended') return { label: 'Suspended', theme: 'amber' }
+	if (sub.account_standing === 'Suspended')
+		return { label: 'Suspended', theme: 'amber' }
 	if (!sub.enabled) return { label: 'Paused', theme: 'gray' }
 	if (sub.status === 'Stopped') return { label: 'Stopped', theme: 'gray' }
 	return null
 }
-const isTerminated = (sub: SubscriptionRow): boolean => sub.status === 'Terminated'
+const isTerminated = (sub: SubscriptionRow): boolean =>
+	sub.status === 'Terminated'
+
+function showRate(row: { cost: number | null; sub: SubscriptionRow }): boolean {
+	if (row.sub.monthly_rate == null || isTerminated(row.sub)) return false
+	if (row.cost == null) return true
+	return Math.abs(row.sub.monthly_rate - row.cost) >= 0.005
+}
 
 function serviceIcon(s: ServiceRow): string {
 	const key = `${s.resource_type || ''} ${s.title || ''}`.toLowerCase()
@@ -54,11 +69,17 @@ function usageLabel(s: ServiceRow): string {
 		const remaining = Math.max(0, s.allowance - s.period_usage)
 		return `${remaining.toLocaleString()} / ${s.allowance.toLocaleString()} ${unit} left`
 	}
-	const included = s.allowance ? ` of ${s.allowance.toLocaleString()} incl.` : ''
+	const included = s.allowance
+		? ` of ${s.allowance.toLocaleString()} incl.`
+		: ''
 	return `${s.period_usage.toLocaleString()} ${unit}${included}`
 }
 function exhausted(s: ServiceRow): boolean {
-	return s.settlement_mode === 'Prepaid Pack' && s.allowance > 0 && s.period_usage >= s.allowance
+	return (
+		s.settlement_mode === 'Prepaid Pack' &&
+		s.allowance > 0 &&
+		s.period_usage >= s.allowance
+	)
 }
 function usagePct(s: ServiceRow): number {
 	if (!s.allowance) return 0
@@ -79,7 +100,10 @@ function overAllowance(s: ServiceRow): boolean {
 				@click="$emit('open', row.sub)"
 			>
 				<div class="flex items-center gap-2">
-					<span class="lucide-server size-4 shrink-0 text-ink-gray-5" aria-hidden="true" />
+					<span
+						class="lucide-server mt-0.5 size-4 shrink-0 text-ink-gray-5"
+						aria-hidden="true"
+					/>
 					<span
 						class="truncate text-base-medium text-ink-gray-9"
 						:class="row.sub.gateway_url ? 'transition-colors group-hover:text-ink-gray-7' : ''"
@@ -105,7 +129,7 @@ function overAllowance(s: ServiceRow): boolean {
 						{{ row.cost != null ? money(row.cost, currency) : '—' }}
 					</span>
 					<span
-						v-if="row.sub.monthly_rate != null && !isTerminated(row.sub)"
+						v-if="showRate(row)"
 						class="block text-p-sm tabular-nums text-ink-gray-5"
 					>
 						{{ money(row.sub.monthly_rate, currency, { trimTrailingZeros: true }) }}/mo
@@ -118,6 +142,7 @@ function overAllowance(s: ServiceRow): boolean {
 					@open="$emit('open', $event)"
 					@pause="$emit('pause', $event)"
 					@resume="$emit('resume', $event)"
+					@assign-project="$emit('assignProject', $event)"
 				/>
 			</div>
 		</template>
@@ -127,15 +152,23 @@ function overAllowance(s: ServiceRow): boolean {
 			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-2">
 					<span
-						class="size-4 shrink-0 text-ink-gray-5"
+						class="mt-0.5 size-4 shrink-0 text-ink-gray-5"
 						:class="serviceIcon(row.service)"
 						aria-hidden="true"
 					/>
 					<span class="truncate text-base-medium text-ink-gray-9">
 						{{ row.service.title || row.service.plan }}
 					</span>
-					<Badge v-if="exhausted(row.service)" theme="amber" label="Exhausted" />
-					<Badge v-else-if="overAllowance(row.service)" theme="amber" label="Over" />
+					<Badge
+						v-if="exhausted(row.service)"
+						theme="amber"
+						label="Exhausted"
+					/>
+					<Badge
+						v-else-if="overAllowance(row.service)"
+						theme="amber"
+						label="Over"
+					/>
 				</div>
 				<div class="pl-6">
 					<div class="truncate text-p-sm text-ink-gray-5">
@@ -157,7 +190,6 @@ function overAllowance(s: ServiceRow): boolean {
 				<span class="block text-sm-medium tabular-nums text-ink-gray-9">
 					{{ money(row.cost ?? 0, currency) }}
 				</span>
-				<span class="block text-p-sm text-ink-gray-5">metered</span>
 			</div>
 		</template>
 	</div>

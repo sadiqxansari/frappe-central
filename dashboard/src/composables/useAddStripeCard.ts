@@ -20,6 +20,7 @@ import {
 import { useCall } from 'frappe-ui'
 import { ref } from 'vue'
 import { API, method } from '@/api/methods'
+import { capitalise } from '@/lib/format'
 import { errorToast, successToast } from '@/lib/toast'
 
 interface CardSetupOrder {
@@ -99,10 +100,12 @@ export function useAddStripeCard({
 				})
 			if (pmError) throw pmError
 
-			const { setupIntent, error: setupError } =
-				await stripe.confirmCardSetup(order.client_secret, {
+			const { setupIntent, error: setupError } = await stripe.confirmCardSetup(
+				order.client_secret,
+				{
 					payment_method: paymentMethod.id,
-				})
+				},
+			)
 			if (setupError) throw setupError
 
 			const c = paymentMethod.card
@@ -140,10 +143,6 @@ export function useAddStripeCard({
 	}
 
 	return { mount, submit, destroy, complete, submitting }
-}
-
-function capitalise(s: string | undefined): string {
-	return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
 }
 
 // India mandates come back on the SetupIntent, either expanded or as a bare id.

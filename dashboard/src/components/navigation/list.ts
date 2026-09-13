@@ -1,7 +1,12 @@
-import { computed } from 'vue'
+import { type Component, computed, defineAsyncComponent } from 'vue'
 import { useCapabilities } from '@/composables/useCapabilities'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { openSearch } from '@/composables/useSearch'
 import { features } from '@/lib/features'
+
+const NotificationsPanel = defineAsyncComponent(
+	() => import('@/components/notifications/NotificationsPanel.vue'),
+)
 
 type SidebarItem = {
 	label: string
@@ -10,8 +15,9 @@ type SidebarItem = {
 	condition?: boolean
 	class?: string
 	onClick?: () => void
-	/** Already a tab in the mobile bottom bar — repeating it in the drawer is noise. */
-	hideOnMobile?: boolean
+	component?: Component
+	/** Display combo, e.g. `Mod+K`. */
+	shortcut?: string
 }
 
 type SidebarSection = {
@@ -21,6 +27,8 @@ type SidebarSection = {
 }
 
 export const sidebarSections = computed<SidebarSection[]>(() => {
+	const isMobile = useIsMobile()
+
 	const { canViewServers, canViewBilling, canViewServices, isMember } =
 		useCapabilities()
 
@@ -32,15 +40,15 @@ export const sidebarSections = computed<SidebarSection[]>(() => {
 					label: 'Search',
 					icon: 'lucide-search',
 					onClick: openSearch,
-					hideOnMobile: true,
+					condition: !isMobile.value,
+					shortcut: 'Mod+K',
 				},
 				{
 					label: 'Notifications',
 					icon: 'lucide-bell',
-					to: '/notifications',
-					condition: isMember.value,
+					condition: isMember.value && !isMobile.value,
+					component: NotificationsPanel,
 					class: 'mb-3',
-					hideOnMobile: true,
 				},
 			],
 		},

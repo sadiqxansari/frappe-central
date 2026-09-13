@@ -1,4 +1,5 @@
 import type { InvitationStatus } from '@/types/api'
+import type { PaymentAttempt } from '@/types/billing'
 import type { Asset } from '@/types/Central/Asset'
 
 // The DocType statuses plus Central's own derived display state (see displayStatus).
@@ -13,11 +14,14 @@ export function isResizing(server: { resize_in_progress?: 0 | 1 }): boolean {
 	return server.resize_in_progress === 1
 }
 
-/** The status to show for a row: "Resizing" while a reshape job runs, else the mirror. */
+/** The status to show for a row: a live action's transitional label ("Terminating"…)
+ *  takes precedence, then "Resizing" while a reshape job runs, else the mirror status. */
 export function displayStatus(server: {
 	status?: AssetStatus
 	resize_in_progress?: 0 | 1
-}): AssetStatus {
+	pending_action?: string | null
+}): string {
+	if (server.pending_action) return server.pending_action
 	return isResizing(server) ? 'Resizing' : (server.status ?? 'Pending')
 }
 
@@ -77,6 +81,19 @@ export function invoiceTheme(status: string | null | undefined): BadgeTheme {
 	return INVOICE_THEME[String(status ?? '').toLowerCase()] ?? 'gray'
 }
 
+// Subscription account_standing → Badge theme. Current is the normal state and
+// stays gray; Past Due/Suspended need attention (amber) — matches PayingForRow's
+// inline `statusInfo` check for the same field.
+const STANDING_THEME: Record<string, BadgeTheme> = {
+	current: 'gray',
+	'past due': 'amber',
+	suspended: 'amber',
+}
+
+export function standingTheme(standing: string | null | undefined): BadgeTheme {
+	return STANDING_THEME[String(standing ?? '').toLowerCase()] ?? 'gray'
+}
+
 // Payment Attempt status → what a customer calls it, and its Badge theme. Same
 // doctrine as invoices: the ordinary outcome is grey and colour is spent only on
 // the states worth noticing — in-flight (nobody knows yet) and failed.
@@ -93,5 +110,42 @@ export function paymentAttemptDisplay(status: string | null | undefined): {
 	theme: BadgeTheme
 } {
 	const key = String(status ?? '').toLowerCase()
-	return ATTEMPT_DISPLAY[key] ?? { label: String(status ?? 'Unknown'), theme: 'gray' }
+	return (
+		ATTEMPT_DISPLAY[key] ?? {
+			label: String(status ?? 'Unknown'),
+			theme: 'gray',
+		}
+	)
+}
+
+export interface AttemptStory {
+	/** Newest successful capture. */
+	captured: PaymentAttempt | null
+	/** Newest attempt still with the gateway (Initiated/Authorised). */
+	inFlight: PaymentAttempt | null
+	/** Newest refunded attempt. */
+	refunded: PaymentAttempt | null
+	failed: number
+	/** Dunning retries that preceded the capture (all failures when uncaptured). */
+	failedBeforeCapture: number
+}
+
+export function attemptStory(attempts: PaymentAttempt[]): AttemptStory {
+	const sorted = [...attempts].sort((a, b) => b.at.localeCompare(a.at))
+	const captured = sorted.find((a) => a.status === 'Captured') ?? null
+	const inFlight =
+		sorted.find((a) => a.status === 'Initiated' || a.status === 'Authorised') ??
+		null
+	const refunded = sorted.find((a) => a.status === 'Refunded') ?? null
+	const failures = sorted.filter((a) => a.status === 'Failed')
+	const failedBeforeCapture = captured
+		? failures.filter((a) => a.at.localeCompare(captured.at) < 0).length
+		: failures.length
+	return {
+		captured,
+		inFlight,
+		refunded,
+		failed: failures.length,
+		failedBeforeCapture,
+	}
 }

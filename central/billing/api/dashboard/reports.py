@@ -130,7 +130,9 @@ def get_statement(team: str | None = None, from_date: str | None = None, to_date
 
 
 @frappe.whitelist()
-def get_tax_summary(team: str | None = None, from_date: str | None = None, to_date: str | None = None) -> dict:
+def get_tax_summary(
+	team: str | None = None, from_date: str | None = None, to_date: str | None = None
+) -> dict:
 	"""Tax charged and withheld per period, grouped by the mechanic that applied.
 
 	A working paper, not a filing: the statutory invoice lives in ERPNext (ADR 0019),
@@ -237,7 +239,9 @@ def list_refunds(team: str | None = None, limit: int = 50) -> list[dict]:
 
 
 @frappe.whitelist()
-def export_csv(report: str, team: str | None = None, from_date: str | None = None, to_date: str | None = None):
+def export_csv(
+	report: str, team: str | None = None, from_date: str | None = None, to_date: str | None = None
+):
 	"""Download one report as CSV. Sets the response directly — Frappe streams it."""
 	team = _resolve_team(team)
 	builders = {
@@ -298,7 +302,10 @@ def _payments_csv(team, from_date, to_date) -> list[list]:
 
 
 def _spend_csv(team, from_date, to_date) -> list[list]:
-	data = get_spend_history(team, months=12)
+	"""The chart's 3/6/12 tab reaches us as from_date; get_spend_history counts back
+	in whole months from today, so turn that date back into a month count."""
+	months = frappe.utils.month_diff(frappe.utils.nowdate(), from_date) if from_date else 12
+	data = get_spend_history(team, months=months)
 	rows = [["Month", "Currency", "Billed", "Paid"]]
 	rows += [[m["month"], data["currency"], m["total"], m["paid"]] for m in data["months"]]
 	return rows

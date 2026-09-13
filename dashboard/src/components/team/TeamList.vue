@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-	Avatar,
-	Button,
-	vOnOutsideClick,
-	TextInput,
-} from 'frappe-ui'
+import { Avatar, Button, TextInput, vOnOutsideClick } from 'frappe-ui'
 import { computed, ref, watch } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useSession } from '@/composables/useSession'

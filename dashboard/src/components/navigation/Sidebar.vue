@@ -2,10 +2,13 @@
 import {
 	Avatar,
 	Dropdown,
+	formatShortcutLabel,
+	KeyboardShortcut,
 	Sidebar,
 	SidebarHeader,
 	SidebarItem,
 	SidebarLabel,
+	useShortcut,
 } from 'frappe-ui'
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -13,21 +16,20 @@ import frappeCloudLogo from '@/assets/fc-logo.svg'
 import { useAppMenu } from '@/composables/useAppMenu'
 import { useMyProfile } from '@/composables/useMyProfile'
 import { useSession } from '@/composables/useSession'
+import { isMac } from '@/lib/platform'
 import { sidebarSections } from './list'
 
 const props = defineProps<{ isMobile?: boolean }>()
+const isMobile = computed(() => !!props.isMobile)
 
-// Search and Notifications are their own tabs in the mobile bottom bar, so the
-// drawer drops them and shows only what the bar can't reach. A section left
-// empty by that drops out with them.
+// Search and Notifications resolve their own `condition` on mobile, so the
+// drawer shows only what the bottom bar can't reach. A section left empty by
+// that drops out with them.
 const sections = computed(() =>
 	sidebarSections.value
 		.map((section) => ({
 			...section,
-			items: section.items.filter(
-				(item) =>
-					item.condition !== false && !(props.isMobile && item.hideOnMobile),
-			),
+			items: section.items.filter((item) => item.condition !== false),
 		}))
 		.filter((section) => section.items.length > 0),
 )
@@ -42,17 +44,34 @@ const { profile } = useMyProfile()
 const route = useRoute()
 const inServersSection = (path: string) => path.startsWith('/servers')
 const sidebarCollapsed = ref(
-	props.isMobile ? false : inServersSection(route.path),
+	isMobile.value ? false : inServersSection(route.path),
 )
 watch(
 	() => route.path,
 	(path, previous) => {
-		if (props.isMobile) return
+		if (isMobile.value) return
 		if (inServersSection(path) !== inServersSection(previous)) {
 			sidebarCollapsed.value = inServersSection(path)
 		}
 	},
 )
+
+useShortcut({
+	key: 'b',
+	ctrl: true,
+	description: 'Toggle sidebar',
+	group: 'General',
+	allowInInput: true,
+	allowInDialog: true,
+	condition: () => !isMobile.value,
+	handler: () => {
+		sidebarCollapsed.value = !sidebarCollapsed.value
+	},
+})
+const sidebarShortcut = formatShortcutLabel({ key: 'b', ctrl: true })
+// KeyboardShortcut's showPlus is not platform-aware. Mac reads as ⌘K;
+// Windows/Linux still need the plus so Ctrl+K doesn't run together.
+const showShortcutPlus = !isMac()
 
 // Composition mode has no built-in per-section collapse (that was a Legacy
 // SidebarSection feature) — track collapsed labelled sections by label here.
@@ -113,32 +132,42 @@ onScopeDispose(() => cancelAnimationFrame(edgeRaf))
 				<template
 					v-if="!section.collapsible || !collapsedSections[section.label]"
 				>
-					<!-- In the mobile drawer these rows are the primary nav and get
-					     touched, not clicked: 16px labels, a proportionally larger
-					     icon, and a row tall enough to hit. The desktop rail keeps
-					     its denser sizing. -->
-					<SidebarItem
-						v-for="item in section.items"
-						:key="item.label"
-						:icon="item.icon"
-						:to="item.to"
-						:onclick="item.onClick"
-						class="mb-0.5"
-						:class="[item.class, isMobile ? '!h-10' : '']"
-						:active="!!item.to && item.to === route.path"
-					>
-						<template v-if="isMobile" #prefix>
-							<span
-								class="size-5 shrink-0 text-ink-gray-6"
-								:class="item.icon"
-								aria-hidden="true"
-							/>
-						</template>
-						<!-- text-lg is 16px in this preset; text-base is 14px. -->
-						<span class="truncate" :class="isMobile ? 'text-lg' : 'text-sm'">
-							{{ item.label }}
-						</span>
-					</SidebarItem>
+					<template v-for="item in section.items" :key="item.label">
+						<component :is="item.component" v-if="item.component" />
+
+						<!-- In the mobile drawer these rows are the primary nav and get
+						     touched, not clicked: 16px labels, a proportionally larger
+						     icon, and a row tall enough to hit. The desktop rail keeps
+						     its denser sizing. -->
+						<SidebarItem
+							v-else
+							:icon="item.icon"
+							:to="item.to"
+							:onclick="item.onClick"
+							class="mb-0.5"
+							:class="[item.class, isMobile ? '!h-10' : '']"
+							:active="!!item.to && item.to === route.path"
+						>
+							<template v-if="isMobile" #prefix>
+								<span
+									class="size-5 shrink-0 text-ink-gray-6"
+									:class="item.icon"
+									aria-hidden="true"
+								/>
+							</template>
+							<!-- text-lg is 16px in this preset; text-base is 14px. -->
+							<span class="truncate" :class="isMobile ? 'text-lg' : 'text-sm'">
+								{{ item.label }}
+							</span>
+							<template v-if="item.shortcut" #suffix>
+								<KeyboardShortcut
+									:combo="item.shortcut"
+									:show-plus="showShortcutPlus"
+									class="mr-2"
+								/>
+							</template>
+						</SidebarItem>
+					</template>
 				</template>
 			</template>
 		</nav>
@@ -209,7 +238,11 @@ onScopeDispose(() => cancelAnimationFrame(edgeRaf))
 	<button
 		v-if="!isMobile"
 		class="sb-edge relative z-10 -mx-3 w-6 shrink-0 cursor-pointer"
-		:aria-label="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+		:aria-label="
+			sidebarCollapsed
+				? `Expand sidebar (${sidebarShortcut})`
+				: `Collapse sidebar (${sidebarShortcut})`
+		"
 		@mousemove="onEdgeMove"
 		@focus="edgeY = 60"
 		@click="sidebarCollapsed = !sidebarCollapsed"

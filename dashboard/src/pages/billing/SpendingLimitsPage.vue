@@ -262,7 +262,8 @@ const levels = computed(() => {
 					<p class="text-p-md text-ink-gray-7 sm:text-p-base">
 						Current:
 						<span class="font-medium text-ink-gray-9">
-							{{ tierLabel(cur) }} tier
+							{{ tierLabel(cur) }}
+							tier
 						</span>
 					</p>
 
@@ -278,7 +279,8 @@ const levels = computed(() => {
 										cycleRatio >= 0.8 ? 'text-ink-amber-6' : 'text-ink-gray-9'
 									"
 								>
-									{{ money(monthlySpend, currency) }} of
+									{{ money(monthlySpend, currency) }}
+									of
 									{{ money(cur.max_spend, currency) }}
 								</p>
 							</div>
@@ -293,7 +295,8 @@ const levels = computed(() => {
 											: 'text-ink-gray-9'
 									"
 								>
-									{{ resourcesUsed }} of {{ cur.max_resource_count }}
+									{{ resourcesUsed }}
+									of {{ cur.max_resource_count }}
 								</p>
 							</div>
 						</div>
@@ -324,8 +327,9 @@ const levels = computed(() => {
 					<!-- No figures here: the Beginner row directly below carries them. -->
 					<p class="mt-1.5 text-p-base text-ink-gray-6">
 						Add a payment method to start on the
-						{{ tierLabel(levels[0]) }} tier. You only pay for what you use,
-						and your limit rises as your payment history grows.
+						{{ tierLabel(levels[0]) }}
+						tier. You only pay for what you use, and your limit rises as your
+						payment history grows.
 					</p>
 					<Button
 						class="mt-4"
@@ -342,7 +346,8 @@ const levels = computed(() => {
 					<p class="text-p-base text-ink-gray-7">
 						Next:
 						<span class="font-medium text-ink-gray-9">
-							{{ tierLabel(nextLevel) }} tier
+							{{ tierLabel(nextLevel) }}
+							tier
 						</span>
 					</p>
 
@@ -448,7 +453,9 @@ const levels = computed(() => {
 							     a sighted desktop user sees (order-* moves neither). Only
 							     mobile reorders, and there the visual order it produces is the
 							     same sequence read aloud, just wrapped onto two lines. -->
-							<span class="order-1 font-semibold text-ink-gray-9 sm:order-none sm:w-28">
+							<span
+								class="order-1 font-semibold text-ink-gray-9 sm:order-none sm:w-28"
+							>
 								{{ tierLabel(l) }}
 							</span>
 
@@ -473,7 +480,9 @@ const levels = computed(() => {
 										"
 										aria-hidden="true"
 									/>
-									<span :class="req.met ? 'text-ink-gray-9' : 'text-ink-gray-6'">
+									<span
+										:class="req.met ? 'text-ink-gray-9' : 'text-ink-gray-6'"
+									>
 										{{ req.text }}
 									</span>
 								</li>
@@ -517,7 +526,7 @@ const levels = computed(() => {
 						v-if="howOpen"
 						class="mt-3 flex list-disc flex-col gap-1.5 pl-4 text-p-base text-ink-gray-6"
 					>
-					<!-- Defined first — the table above leans on this word. -->
+						<!-- Defined first — the table above leans on this word. -->
 						<li>
 							A resource is anything that bills while it runs: a server or a
 							subscribed service.
@@ -528,7 +537,7 @@ const levels = computed(() => {
 						</li>
 						<li>
 							You move up automatically as your paid invoices and total spend
-						cross each tier's bar.
+							cross each tier's bar.
 						</li>
 						<li>
 							New teams start at the base tier. Add a payment method or prepaid
